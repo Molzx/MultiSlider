@@ -120,7 +120,40 @@ extension MultiSlider {
                 addThumbView()
             }
         }
+        updateInnerTrackView()
         updateOuterTrackViews()
+    }
+    
+    func updateInnerTrackView() {
+        guard showInnerTrackGradientLayer else { return }
+        
+        innerTrackView.removeFromSuperview()
+        
+        trackView.addConstrainedSubview(innerTrackView, constrain: .top, .bottom, .left, .right)
+        
+        guard let lastThumb = thumbViews.last else { return }
+        
+        if let firstThumb = thumbViews.first, firstThumb != lastThumb {
+            // Has distance
+            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .top(in: orientation) }
+            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .bottom(in: orientation) }
+            
+            trackView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: hideThumb ? .top(in: orientation) : .center(in: orientation))
+            trackView.constrain(innerTrackView, at: .bottom(in: orientation), to: firstThumb, at: hideThumb ? .bottom(in: orientation) : .center(in: orientation))
+            
+        } else {
+            // only one thumb
+            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && ($0.firstAttribute == .top(in: orientation)) }
+            
+            trackView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: hideThumb ? .top(in: orientation) : .center(in: orientation))
+        }
+        
+        trackView.sendSubviewToBack(innerTrackView)
+        
+        innerTrackGradientLayer.cornerRadius = trackView.layer.cornerRadius
+        if #available(iOS 11.0, *) {
+            innerTrackGradientLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        }
     }
 
     func updateOuterTrackViews() {
@@ -180,10 +213,12 @@ extension MultiSlider {
         }
         let thumbView = thumbViews[i]
         slideView.constrain(valueLabel, at: valueLabelPosition.perpendicularCenter, to: thumbView)
+        
+        let margin = valueLabelMargin ?? -valueLabelPosition.inwardSign * thumbView.diagonalSize / 4
         slideView.constrain(
             valueLabel, at: valueLabelPosition.opposite,
             to: thumbView, at: valueLabelPosition,
-            diff: -valueLabelPosition.inwardSign * thumbView.diagonalSize / 4
+            diff: margin
         )
         valueLabels.append(valueLabel)
         updateValueLabel(i)

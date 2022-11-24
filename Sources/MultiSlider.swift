@@ -65,6 +65,18 @@ open class MultiSlider: UIControl {
             }
         }
     }
+    
+    /// set value label margin to the slider
+    open dynamic var valueLabelMargin: CGFloat? {
+        didSet {
+            valueLabels.removeViewsStartingAt(0)
+            if valueLabelPosition != .notAnAttribute {
+                for i in 0 ..< thumbViews.count {
+                    addValueLabel(i)
+                }
+            }
+        }
+    }
 
     /// value label shows difference from previous thumb value (true) or absolute value (false = default)
     @IBInspectable open dynamic var isValueLabelRelative: Bool = false {
@@ -210,6 +222,25 @@ open class MultiSlider: UIControl {
             }
         }
     }
+    
+    @IBInspectable public dynamic var hideThumb: Bool = false {
+        didSet {
+            thumbImage = nil
+            thumbTintColor = .clear
+            updateInnerTrackView()
+        }
+    }
+    
+    @IBInspectable public dynamic var showInnerTrackGradientLayer: Bool = false {
+        didSet {
+            updateInnerTrackView()
+        }
+    }
+    
+    @objc open dynamic var innerTrackGradientLayer: CAGradientLayer {
+        return innerTrackView.gradientLayer
+    }
+    
 
     // MARK: - Subviews
 
@@ -224,11 +255,22 @@ open class MultiSlider: UIControl {
 
     let slideView = UIView()
     let panGestureView = UIView()
+    ///Will affect the gesture touch area
     let margin: CGFloat = 32
     var isSettingValue = false
     lazy var defaultThumbImage: UIImage? = .circle()
     var selectionFeedbackGenerator = AvailableHapticFeedback()
 
+    
+    lazy var innerTrackView: GradientView = {
+        let view = GradientView()
+        view.gradientLayer.colors = [UIColor.blue.cgColor, UIColor.red.cgColor]
+        view.gradientLayer.locations = [0, 1]
+        view.gradientLayer.startPoint = CGPoint(x: 0, y: 0)
+        view.gradientLayer.endPoint = CGPoint(x: 1, y: 0)
+        return view
+    }()
+    
     // MARK: - Overrides
 
     override open func tintColorDidChange() {
