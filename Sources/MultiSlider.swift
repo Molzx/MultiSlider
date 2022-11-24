@@ -241,6 +241,9 @@ open class MultiSlider: UIControl {
         return innerTrackView.gradientLayer
     }
     
+    
+    /// disabled drag if true
+    @IBInspectable public dynamic var disabledDragGesture: Bool = false
 
     // MARK: - Subviews
 

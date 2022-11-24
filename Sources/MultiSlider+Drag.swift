@@ -16,6 +16,7 @@ extension MultiSlider: UIGestureRecognizerDelegate {
     }
 
     @objc open func didDrag(_ panGesture: UIPanGestureRecognizer) {
+        guard !disabledDragGesture else { return }
         switch panGesture.state {
         case .began:
             if isHapticSnap { selectionFeedbackGenerator.prepare() }
