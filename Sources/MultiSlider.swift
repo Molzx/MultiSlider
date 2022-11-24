@@ -256,7 +256,7 @@ open class MultiSlider: UIControl {
     let slideView = UIView()
     let panGestureView = UIView()
     ///Will affect the gesture touch area
-    let margin: CGFloat = 32
+    let margin: CGFloat = 0
     var isSettingValue = false
     lazy var defaultThumbImage: UIImage? = .circle()
     var selectionFeedbackGenerator = AvailableHapticFeedback()
