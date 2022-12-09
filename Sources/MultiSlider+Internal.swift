@@ -319,6 +319,7 @@ extension MultiSlider {
             } else {
                 slideView.constrain(thumbView, at: .centerX, to: slideView, at: .left)
             }
+            updateInnerTrackView(thumbRelativeDistanceToMax: thumbRelativeDistanceToMax)
         } else { // vertical orientation
             if thumbRelativeDistanceToMax.isNormal {
                 slideView.constrain(thumbView, at: .centerY, to: slideView, at: .bottom, ratio: CGFloat(thumbRelativeDistanceToMax))
