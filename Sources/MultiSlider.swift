@@ -226,19 +226,26 @@ open class MultiSlider: UIControl {
     @IBInspectable public dynamic var hideThumb: Bool = false {
         didSet {
             thumbImage = nil
+            tintColor = .clear
             thumbTintColor = .clear
-            updateInnerTrackView()
+//            updateInnerTrackView()
         }
     }
     
     @IBInspectable public dynamic var showInnerTrackGradientLayer: Bool = false {
         didSet {
-            updateInnerTrackView()
+//            updateInnerTrackView()
         }
     }
     
     @objc open dynamic var innerTrackGradientLayer: CAGradientLayer {
         return innerTrackView.gradientLayer
+    }
+    
+    @IBInspectable open dynamic var trackColor: UIColor? {
+        didSet {
+            slideView.backgroundColor = trackColor
+        }
     }
     
     

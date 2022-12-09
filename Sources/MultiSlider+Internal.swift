@@ -79,11 +79,13 @@ extension MultiSlider {
         let thumbSize = (thumbImage ?? defaultThumbImage)?.size ?? CGSize(width: 2, height: 2)
         let thumbDiameter = orientation == .vertical ? thumbSize.height : thumbSize.width
         let halfThumb = thumbDiameter / 2 - 1 // 1 pixel for semi-transparent boundary
+        
+        let edgeMargin = hideThumb ? halfThumb : halfThumb
         if orientation == .vertical {
-            trackView.layoutMargins = UIEdgeInsets(top: halfThumb, left: 0, bottom: halfThumb, right: 0)
+            trackView.layoutMargins = UIEdgeInsets(top: edgeMargin, left: 0, bottom: edgeMargin, right: 0)
             constrain(.width, to: max(thumbSize.width, trackWidth), relation: .greaterThanOrEqual)
         } else {
-            trackView.layoutMargins = UIEdgeInsets(top: 0, left: halfThumb, bottom: 0, right: halfThumb)
+            trackView.layoutMargins = UIEdgeInsets(top: 0, left: edgeMargin, bottom: 0, right: edgeMargin)
             constrainHorizontalTrackViewToLayoutMargins()
             constrain(.height, to: max(thumbSize.height, trackWidth), relation: .greaterThanOrEqual)
         }
@@ -120,46 +122,67 @@ extension MultiSlider {
                 addThumbView()
             }
         }
-        updateInnerTrackView()
+//        updateInnerTrackView()
+        _setupInnerTrackView()
         updateOuterTrackViews()
     }
-    
-    func updateInnerTrackView() {
+
+    func _setupInnerTrackView() {
         guard showInnerTrackGradientLayer else { return }
-        
+
         innerTrackView.removeFromSuperview()
-        
-        trackView.addConstrainedSubview(innerTrackView, constrain: .top, .bottom, .left, .right)
-        
+
+        slideView.addConstrainedSubview(innerTrackView, constrain: .top, .bottom, .left, .right)
+
         guard let lastThumb = thumbViews.last else { return }
-        
+
         if let firstThumb = thumbViews.first, firstThumb != lastThumb {
             // Has distance
-            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .top(in: orientation) }
-            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .bottom(in: orientation) }
-            
-            trackView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: hideThumb ? .top(in: orientation) : .center(in: orientation))
-            trackView.constrain(innerTrackView, at: .bottom(in: orientation), to: firstThumb, at: hideThumb ? .bottom(in: orientation) : .center(in: orientation))
-            
+            slideView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .top(in: orientation) }
+            slideView.removeFirstConstraint { $0.firstItem === innerTrackView && $0.firstAttribute == .bottom(in: orientation) }
+
+            slideView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: hideThumb ? .top(in: orientation) : .center(in: orientation))
+            slideView.constrain(innerTrackView, at: .bottom(in: orientation), to: firstThumb, at: hideThumb ? .bottom(in: orientation) : .center(in: orientation))
+
         } else {
             // only one thumb
-            trackView.removeFirstConstraint { $0.firstItem === innerTrackView && ($0.firstAttribute == .top(in: orientation)) }
-            
-            trackView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: hideThumb ? .top(in: orientation) : .center(in: orientation))
+            slideView.removeFirstConstraint { $0.firstItem === innerTrackView && ($0.firstAttribute == .top(in: orientation)) }
+
+            //            trackView.constrain(innerTrackView, at: .top(in: orientation), to: lastThumb, at: false ? .top(in: orientation) : .center(in: orientation))
         }
-        
-        trackView.sendSubviewToBack(innerTrackView)
-        
+
+        slideView.sendSubviewToBack(innerTrackView)
+
         innerTrackGradientLayer.cornerRadius = trackView.layer.cornerRadius
         if #available(iOS 11.0, *) {
             innerTrackGradientLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         }
     }
 
+    func updateInnerTrackView(thumbRelativeDistanceToMax: CGFloat) {
+        guard showInnerTrackGradientLayer else { return }
+        guard let lastThumb = thumbViews.last else { return }
+
+        if let firstThumb = thumbViews.first, firstThumb != lastThumb {
+            return
+        }
+        // only one thumb
+
+        if hideThumb {
+            slideView.removeFirstConstraint { $0.firstItem === innerTrackView && ($0.firstAttribute == .top(in: orientation)) }
+
+            if thumbRelativeDistanceToMax < 1 {
+                slideView.constrain(innerTrackView, at: .top(in: orientation), to: slideView, at: .right, ratio: CGFloat(1 - thumbRelativeDistanceToMax))
+            } else {
+                slideView.constrain(innerTrackView, at: .top(in: orientation), to: slideView, at: .left)
+            }
+        }
+    }
+
     func updateOuterTrackViews() {
         outerTrackViews.removeViewsStartingAt(0)
         outerTrackViews.removeAll()
-        guard nil != outerTrackColor else { return }
+        guard outerTrackColor != nil else { return }
         guard let lastThumb = thumbViews.last else { return }
         outerTrackViews = [outerTrackView(constraining: .bottom(in: orientation), to: lastThumb)]
         guard let firstThumb = thumbViews.first, firstThumb != lastThumb else { return }
@@ -169,14 +192,15 @@ extension MultiSlider {
     private func outerTrackView(constraining: NSLayoutConstraint.Attribute, to thumbView: UIView) -> UIView {
         let view = UIView()
         view.backgroundColor = outerTrackColor
-        trackView.addConstrainedSubview(view, constrain: .top, .bottom, .left, .right)
-        trackView.removeFirstConstraint { $0.firstItem === view && $0.firstAttribute == constraining }
-        trackView.constrain(view, at: constraining, to: thumbView, at: .center(in: orientation))
-        trackView.sendSubviewToBack(view)
+        slideView.addConstrainedSubview(view, constrain: .top, .bottom, .left, .right)
+        slideView.removeFirstConstraint { $0.firstItem === view && $0.firstAttribute == constraining }
+        slideView.constrain(view, at: constraining, to: thumbView, at: .center(in: orientation),diff: -trackView.layer.cornerRadius)
+        slideView.sendSubviewToBack(view)
 
         view.layer.cornerRadius = trackView.layer.cornerRadius
         if #available(iOS 11.0, *) {
-            view.layer.maskedCorners = .direction(constraining.opposite)
+//            view.layer.maskedCorners = .direction(constraining.opposite)
+            innerTrackGradientLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         }
 
         return view
@@ -213,7 +237,7 @@ extension MultiSlider {
         }
         let thumbView = thumbViews[i]
         slideView.constrain(valueLabel, at: valueLabelPosition.perpendicularCenter, to: thumbView)
-        
+
         let margin = valueLabelMargin ?? -valueLabelPosition.inwardSign * thumbView.diagonalSize / 4
         slideView.constrain(
             valueLabel, at: valueLabelPosition.opposite,
@@ -250,7 +274,7 @@ extension MultiSlider {
             let length = maximumValue - startValue
             let relativeStepSize = snapStepSize / (maximumValue - minimumValue)
             var step: CGFloat = 0
-            if value.isEmpty && 1 < appendCount {
+            if value.isEmpty, appendCount > 1 {
                 step = (length / CGFloat(appendCount - 1)).truncated(relativeStepSize)
             } else {
                 step = (length / CGFloat(appendCount)).truncated(relativeStepSize)
@@ -258,7 +282,7 @@ extension MultiSlider {
                     startValue += step
                 }
             }
-            if 0 == step { step = relativeStepSize }
+            if step == 0 { step = relativeStepSize }
             value += stride(from: startValue, through: maximumValue, by: step)
         }
         if value.count > count { // don't add "else", since prev calc may add too many values in some cases
@@ -309,7 +333,7 @@ extension MultiSlider {
 
     func layoutTrackEdge(toView: UIImageView, edge: NSLayoutConstraint.Attribute, superviewEdge: NSLayoutConstraint.Attribute) {
         removeFirstConstraint { $0.firstItem === self.trackView && ($0.firstAttribute == edge || $0.firstAttribute == superviewEdge) }
-        if nil != toView.image {
+        if toView.image != nil {
             constrain(trackView, at: edge, to: toView, at: edge.opposite, diff: edge.inwardSign * 8)
         } else {
             constrain(trackView, at: edge, to: self, at: superviewEdge)
@@ -319,5 +343,6 @@ extension MultiSlider {
     func updateTrackViewCornerRounding() {
         trackView.layer.cornerRadius = hasRoundTrackEnds ? trackWidth / 2 : 1
         outerTrackViews.forEach { $0.layer.cornerRadius = trackView.layer.cornerRadius }
+        slideView.layer.cornerRadius = trackView.layer.cornerRadius
     }
 }
